@@ -1,8 +1,11 @@
 import { extract } from "@extractus/article-extractor";
 import express from "express";
+import cors from "cors";
 
 const app = express();
 const port = 3000;
+
+app.use(cors());
 
 const article = await extract("https://www.bcv.org.ve/");
 
