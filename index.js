@@ -1,4 +1,4 @@
-import { extract } from "@extractus/article-extractor";
+import { chromium } from "playwright";
 import express from "express";
 import cors from "cors";
 
@@ -7,39 +7,39 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 
-const article = await extract("https://www.bcv.org.ve/");
+(async () => {
+  const browser = await chromium.launch({
+    headless: true,
+  });
 
-const contentHTML = article;
+  const page = await browser.newPage();
+  await page.goto("https://www.bcv.org.ve/", { timeout: 60000 });
 
-//console.log(contentHTML);
+  const dolar = await page.textContent(
+    '//*[@id="dolar"]/div/div/div[2]/strong'
+  );
+  const euro = await page.textContent('//*[@id="euro"]/div/div/div[2]/strong');
+  const yuan = await page.textContent('//*[@id="yuan"]/div/div/div[2]/strong');
+  const lira = await page.textContent('//*[@id="lira"]/div/div/div[2]/strong');
+  const rublo = await page.textContent(
+    '//*[@id="rublo"]/div/div/div[2]/strong'
+  );
 
-const extractCurrencyTable = (html) => {
-  const regex =
-    /<span>\s*(.*?)\s*<\/span>\s*<\/p>\s*<p><strong>\s*(.*?)\s*<\/strong>/g;
-  let match;
-  const rows = [];
+  const valores = {
+    dolar: dolar,
+    euro: euro,
+    yuan: yuan,
+    lira: lira,
+    rublo: rublo,
+  };
 
-  while ((match = regex.exec(html)) !== null) {
-    rows.push(`${match[1]}        ${match[2]}`);
-  }
+  app.get("/", (req, res) => {
+    res.send(valores);
+  });
 
-  return `Moneda        Valor\n${rows.join("\n")}`;
-};
+  await browser.close();
 
-//console.log(table);
-
-app.get("/", (req, res) => {
-  const table = extractCurrencyTable(contentHTML.content);
-
-  const regex = /USD\s+([\d,]+(?:\.\d+)?)/;
-  const match = table.match(regex);
-
-  if (match) {
-    console.log("Valor USD:", match[1]); // Valor USD: 36,61320000
-  }
-  res.send(match);
-});
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
+  app.listen(port, () => {
+    console.log(`App corriendo en puerto ${port}`);
+  });
+})();
